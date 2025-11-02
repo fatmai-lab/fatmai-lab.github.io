@@ -52,9 +52,25 @@
     // define the map with the options above
     const map = L.map("map", mapOptions);
 
-// add a base map to the map
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+// تحديد وقت الجهاز الحالي
+const hour = new Date().getHours();
+
+// اختيار الخريطة حسب الوقت (نهار / ليل)
+let basemapUrl;
+if (hour >= 6 && hour < 18) {
+  // نهار
+  basemapUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  console.log("🌞 Daytime map activated");
+} else {
+  // ليل
+  basemapUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+  console.log("🌙 Nighttime map activated");
+}
+
+// إضافة الخريطة الأساسية
+L.tileLayer(basemapUrl, {
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: 'abcd',
   maxZoom: 20
 }).addTo(map);
@@ -113,6 +129,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 </body>
 
 </html>
+
 
 
 
