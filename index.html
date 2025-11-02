@@ -52,6 +52,58 @@
     // define the map with the options above
     const map = L.map("map", mapOptions);
 
+    
+const locateBtn = L.control({ position: 'topleft' });
+
+locateBtn.onAdd = function (map) {
+  const btn = L.DomUtil.create('button', 'locate-button');
+  btn.innerHTML = '📍 Locate Me';
+  btn.style.backgroundColor = '#fff';
+  btn.style.padding = '6px 10px';
+  btn.style.border = '2px solid #555';
+  btn.style.borderRadius = '8px';
+  btn.style.cursor = 'pointer';
+  btn.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)';
+  btn.title = 'Find your current location';
+
+  btn.onclick = function () {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          // إنشاء دائرة في موقع المستخدم
+          const userMarker = L.circleMarker([lat, lon], {
+            radius: 8,
+            fillColor: 'blue',
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).addTo(map);
+
+          // عمل zoom تلقائي على الموقع
+          map.setView([lat, lon], 17);
+
+          // عرض Popup صغير
+          userMarker.bindPopup("📍 You are here!").openPopup();
+        },
+        function () {
+          alert("⚠️ لم يتم السماح بالوصول إلى الموقع.");
+        }
+      );
+    } else {
+      alert("❌ المتصفح لا يدعم تحديد الموقع الجغرافي.");
+    }
+  };
+
+  return btn;
+};
+
+// إضافة الزر إلى الخريطة
+locateBtn.addTo(map);
+    
 // إضافة الخريطة الأساسية
     L.tileLayer(basemapUrl, {
         attribution:
@@ -114,6 +166,7 @@
 </body>
 
 </html>
+
 
 
 
