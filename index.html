@@ -198,18 +198,19 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     zonesLayer.addTo(map);
     wasteContainersLayer.addTo(map);
 
-        map.whenReady(function () {
+      map.whenReady(function () {
       const loading = document.getElementById("loading-screen");
-      loading.classList.add("fade-out");
+      loading.classList.add("fade-out"); // تقل الشفافية تدريجيًا
       setTimeout(() => {
-        loading.style.display = "none";
-      }, 1);
+        loading.style.display = "none";  // إزالة الشاشة بعد 1 ثانية
+      }, 1000); 
     });
 
   </script>
 </body>
 
 </html>
+
 
 
 
