@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>Ramallah Waste Containers</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
 
   <style>
     body {
       margin: 0;
       height: 100%;
       width: 100%;
-      background-color: #1a1a1a;
+      overflow: hidden;
     }
 
     #map {
       position: absolute;
       width: 100%;
       height: 100%;
+      top: 0;
+      bottom: 0;
       opacity: 0;
-      transition: opacity 2s ease-in;
+      transition: opacity 1s ease-in;
     }
 
-    /* شاشة التحميل */
+    /* شاشة تحميل بشعار بيرزيت */
     #loading-screen {
       position: fixed;
       top: 0;
@@ -41,9 +44,42 @@
       transition: opacity 1s ease;
     }
 
+    /* حركة دوران الشعار */
+    @keyframes rotate {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* حركة النص */
+    @keyframes pulse {
+      0% {
+        opacity: 0.3;
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0.3;
+      }
+    }
+
     #loading-screen img {
-      width: 140px;
+      width: 150px;
       margin-bottom: 15px;
+      animation: rotate 4s linear infinite;
+    }
+
+    #loading-text {
+      animation: pulse 2s infinite;
+      font-size: 18px;
+      letter-spacing: 1px;
     }
 
     #loading-screen.fade-out {
@@ -51,196 +87,170 @@
       pointer-events: none;
     }
 
-    /* أزرار التحكم */
-    .custom-controls {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 1000;
-    }
-
-    .custom-btn {
+    .leaflet-control-scale {
       background: white;
-      border: none;
+      padding: 2px;
+    }
+
+    .leaflet-control-custom {
+      background: white;
+      padding: 5px;
       border-radius: 8px;
-      padding: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
       cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-
-    .custom-btn:hover {
-      transform: scale(1.1);
-      background: #ffefef;
-    }
-
-    /* سهم الشمال */
-    #north-arrow {
-      position: absolute;
-      bottom: 15px;
-      right: 15px;
-      z-index: 1000;
-      width: 60px;
-      opacity: 0.9;
     }
   </style>
 </head>
 
 <body>
 
+  <!-- شاشة التحميل -->
   <div id="loading-screen">
-    <img src="birzeit.png" alt="Birzeit University Logo">
-    <p>Loading Interactive Map...</p>
+    <img src="https://upload.wikimedia.org/wikipedia/en/f/f7/Birzeit_University_logo.png"
+      alt="Birzeit University Logo">
+    <p id="loading-text">Loading Ramallah Map...</p>
   </div>
 
   <div id="map"></div>
 
-  <!-- سهم الشمال -->
-  <img id="north-arrow" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/North_arrow.svg/512px-North_arrow.svg.png" alt="North Arrow">
-
-  <!-- أزرار التحكم -->
-  <div class="custom-controls">
-    <button class="custom-btn" id="toggle-theme">🌞 / 🌙</button>
-    <button class="custom-btn" id="toggle-heat">🔥 Density</button>
-    <button class="custom-btn" id="locate-me">📍</button>
-  </div>
-
-  <!-- مكتبات -->
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
   <script>
-    const map = L.map("map", {
+    // إعداد الخريطة
+    const mapOptions = {
+      zoomSnap: 0.5,
       center: [31.9045, 35.2045],
-      zoom: 15,
-      zoomSnap: 0.25
-    });
+      zoom: 17.5,
+    };
+    const map = L.map("map", mapOptions);
 
-    // إعداد الخلفيات (ليل ونهار)
-    const dayTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    });
+    // مقياس الرسم
+    L.control.scale({ position: 'bottomleft' }).addTo(map);
 
-    const nightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20,
-      attribution: '&copy; CARTO'
-    });
+    // إضافة إشارة الشمال
+    const north = L.control({ position: "topright" });
+    north.onAdd = function (map) {
+      const div = L.DomUtil.create("div", "leaflet-control-custom");
+      div.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/54/54494.png" width="40" title="North">';
+      return div;
+    };
+    north.addTo(map);
 
-    // اختيار الوضع حسب الوقت
-    const hour = new Date().getHours();
-    let currentTheme = (hour >= 6 && hour < 18) ? "day" : "night";
-    (currentTheme === "day" ? dayTiles : nightTiles).addTo(map);
+    // زر تحديد الموقع
+    const locateBtn = L.control({ position: 'topleft' });
+    locateBtn.onAdd = function (map) {
+      const btn = L.DomUtil.create('button', 'locate-button');
+      btn.innerHTML = '📍 Locate Me';
+      btn.style.backgroundColor = '#fff';
+      btn.style.padding = '6px 10px';
+      btn.style.border = '2px solid #555';
+      btn.style.borderRadius = '8px';
+      btn.style.cursor = 'pointer';
+      btn.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)';
+      btn.title = 'Find your current location';
+
+      btn.onclick = function () {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (position) {
+              const lat = position.coords.latitude;
+              const lon = position.coords.longitude;
+              const userMarker = L.circleMarker([lat, lon], {
+                radius: 8,
+                fillColor: 'blue',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9
+              }).addTo(map);
+              map.setView([lat, lon], 17);
+              userMarker.bindPopup("📍 You are here!").openPopup();
+            },
+            function () {
+              alert("⚠️ لم يتم السماح بالوصول إلى الموقع.");
+            }
+          );
+        } else {
+          alert("❌ المتصفح لا يدعم تحديد الموقع الجغرافي.");
+        }
+      };
+      return btn;
+    };
+    locateBtn.addTo(map);
+
+    // اختيار الخريطة حسب الوقت (ليل / نهار)
+    const currentHour = new Date().getHours();
+    const isNight = currentHour >= 18 || currentHour < 6;
+    const baseMapUrl = isNight
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(baseMapUrl, {
+      attribution: '&copy; OpenStreetMap & CARTO',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
 
     // تحميل الطبقات
-    let wasteLayer, heatLayer, zoneLayer;
+    let wasteContainersLayer;
+    let zonesLayer;
 
-    $.getJSON("wasteContainer.json", function(data) {
-      let heatPoints = [];
-
-      wasteLayer = L.geoJson(data, {
-        pointToLayer: function(feature, latlng) {
-          heatPoints.push([latlng.lat, latlng.lng]);
-
-          // دائرة بدل أيقونة
+    $.getJSON("wasteContainer.json", function (WC) {
+      wasteContainersLayer = L.geoJson(WC, {
+        pointToLayer: function (feature, latlng) {
           return L.circleMarker(latlng, {
-            radius: 7,
+            radius: 6,
             fillColor: "red",
             color: "#fff",
-            weight: 2,
+            weight: 1,
             opacity: 1,
             fillOpacity: 0.85
-          }).bindPopup("<b>Waste Container</b><br>Lat: " + latlng.lat.toFixed(4) + "<br>Lon: " + latlng.lng.toFixed(4));
+          });
         }
       }).addTo(map);
-
-      // خريطة الكثافة
-      heatLayer = L.heatLayer(heatPoints, {
-        radius: 25,
-        blur: 15,
-        maxZoom: 17,
-        gradient: {
-          0.2: 'blue',
-          0.5: 'lime',
-          0.8: 'red'
-        }
-      });
-
-      checkLoaded();
+      checkAllLayersLoaded();
     });
 
-    $.getJSON("RamallahZones.json", function(zones) {
-      zoneLayer = L.geoJson(zones, {
-        style: {
-          color: "yellow",
-          weight: 1,
-          fillOpacity: 0.2
+    $.getJSON("RamallahZones.json", function (RZ) {
+      zonesLayer = L.geoJson(RZ, {
+        style: function (feature) {
+          return {
+            fillColor: "yellow",
+            fillOpacity: 0.25,
+            color: "orange",
+            weight: 1.2,
+            opacity: 0.8
+          };
+        },
+        onEachFeature: function (feature, layer) {
+          layer.on('click', function () {
+            alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
+          });
         }
       }).addTo(map);
-      checkLoaded();
+      checkAllLayersLoaded();
     });
 
-    // التأكد من تحميل الطبقات
-    function checkLoaded() {
-      if (wasteLayer && zoneLayer) {
-        L.control.scale({ metric: true }).addTo(map);
+    // بعد تحميل الطبقات
+    function checkAllLayersLoaded() {
+      if (wasteContainersLayer && zonesLayer) {
+        L.control.layers({}, {
+          "Zones": zonesLayer,
+          "Waste Containers": wasteContainersLayer
+        }).addTo(map);
+
         document.getElementById("map").style.opacity = 1;
 
         const loading = document.getElementById("loading-screen");
         loading.classList.add("fade-out");
-        setTimeout(() => loading.style.display = "none", 1500);
+        setTimeout(() => {
+          loading.style.display = "none";
+        }, 4000);
       }
     }
-
-    // زر تبديل الليل والنهار
-    document.getElementById("toggle-theme").onclick = function() {
-      if (currentTheme === "day") {
-        map.removeLayer(dayTiles);
-        nightTiles.addTo(map);
-        currentTheme = "night";
-      } else {
-        map.removeLayer(nightTiles);
-        dayTiles.addTo(map);
-        currentTheme = "day";
-      }
-    };
-
-    // زر تفعيل خريطة الكثافة
-    let heatVisible = false;
-    document.getElementById("toggle-heat").onclick = function() {
-      if (!heatVisible) {
-        map.addLayer(heatLayer);
-        heatVisible = true;
-      } else {
-        map.removeLayer(heatLayer);
-        heatVisible = false;
-      }
-    };
-
-    // زر تحديد الموقع
-    document.getElementById("locate-me").onclick = function() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          const userMarker = L.circleMarker([lat, lon], {
-            radius: 8,
-            fillColor: 'blue',
-            color: '#fff',
-            weight: 2,
-            fillOpacity: 0.9
-          }).addTo(map);
-          userMarker.bindPopup("📍 You are here").openPopup();
-          map.setView([lat, lon], 17);
-        });
-      } else {
-        alert("⚠️ المتصفح لا يدعم تحديد الموقع الجغرافي");
-      }
-    };
   </script>
+
 </body>
+
 </html>
