@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <title>Ramallah Waste Containers</title>
 
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen/Control.FullScreen.css" />
 
   <style>
     body {
@@ -52,7 +52,7 @@
       pointer-events: none;
     }
 
-    /* أيقونات التحكم على الطرف */
+    /* أيقونات التحكم */
     .custom-controls {
       position: absolute;
       top: 10px;
@@ -89,18 +89,21 @@
     }
   </style>
 </head>
-
 <body>
 
+  <!-- شاشة التحميل -->
   <div id="loading-screen">
     <img src="birzeit.png" alt="Birzeit University Logo">
     <p>Loading Interactive Map...</p>
   </div>
 
+  <!-- الخريطة -->
   <div id="map"></div>
 
+  <!-- سهم الشمال -->
   <img id="north-arrow" src="https://upload.wikimedia.org/wikipedia/commons/8/88/Compass_rose_simple.svg" alt="North Arrow">
 
+  <!-- أيقونات التحكم -->
   <div class="custom-controls">
     <button class="custom-btn" id="toggle-theme">🌞 / 🌙</button>
     <button class="custom-btn" id="toggle-heat">🔥 Density</button>
@@ -113,32 +116,30 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
   <script>
+    // إعداد الخريطة
     const map = L.map("map", {
       center: [31.9045, 35.2045],
       zoom: 15,
       zoomSnap: 0.25
     });
 
-    // إعداد الخلفيات (ليل ونهار)
+    // الخلفيات
     const dayTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     });
-
     const nightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20,
       attribution: '&copy; CARTO'
     });
 
-    // تحديد الوضع حسب الوقت
-    const hour = new Date().getHours();
-    let currentTheme = (hour >= 6 && hour < 18) ? "day" : "night";
+    let currentTheme = (new Date().getHours() >= 6 && new Date().getHours() < 18) ? "day" : "night";
     (currentTheme === "day" ? dayTiles : nightTiles).addTo(map);
 
-    // تحميل طبقات
+    // متغيرات الطبقات
     let wasteLayer, heatLayer, zoneLayer;
 
-    // أيقونة جميلة للحاويات
+    // أيقونة الحاويات
     const binIcon = L.icon({
       iconUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',
       iconSize: [28, 28],
@@ -146,47 +147,40 @@
       popupAnchor: [0, -14]
     });
 
-    $.getJSON("wasteContainer.json", function (data) {
+    // تحميل الحاويات
+    $.getJSON("wasteContainer.json", function(data) {
       let heatPoints = [];
       wasteLayer = L.geoJson(data, {
-        pointToLayer: function (feature, latlng) {
+        pointToLayer: function(feature, latlng) {
           heatPoints.push([latlng.lat, latlng.lng]);
           return L.marker(latlng, { icon: binIcon })
             .bindPopup("<b>Waste Container</b><br>Lat: " + latlng.lat.toFixed(4) + "<br>Lon: " + latlng.lng.toFixed(4));
         }
       }).addTo(map);
 
-      // خريطة الكثافة
+      // Heat / Density Layer
       heatLayer = L.heatLayer(heatPoints, {
         radius: 25,
         blur: 15,
         maxZoom: 17,
-        gradient: {
-          0.2: 'blue',
-          0.5: 'lime',
-          0.8: 'red'
-        }
+        gradient: { 0.2: 'blue', 0.5: 'lime', 0.8: 'red' }
       });
 
       checkLoaded();
     });
 
-    $.getJSON("RamallahZones.json", function (zones) {
+    // تحميل المناطق
+    $.getJSON("RamallahZones.json", function(zones) {
       zoneLayer = L.geoJson(zones, {
-        style: {
-          color: "yellow",
-          weight: 1,
-          fillOpacity: 0.2
-        }
+        style: { color: "yellow", weight: 1, fillOpacity: 0.2 }
       }).addTo(map);
       checkLoaded();
     });
 
-    // عند تحميل كل الطبقات
+    // التأكد من تحميل كل الطبقات
     function checkLoaded() {
       if (wasteLayer && zoneLayer) {
-        L.control.scale({ metric: true }).addTo(map); // مقياس رسم
-
+        L.control.scale({ metric: true }).addTo(map); // مقياس الرسم
         document.getElementById("map").style.opacity = 1;
         const loading = document.getElementById("loading-screen");
         loading.classList.add("fade-out");
@@ -194,8 +188,8 @@
       }
     }
 
-    // زر تبديل الليل والنهار
-    document.getElementById("toggle-theme").onclick = function () {
+    // تبديل الليل / النهار
+    document.getElementById("toggle-theme").onclick = function() {
       if (currentTheme === "day") {
         map.removeLayer(dayTiles);
         nightTiles.addTo(map);
@@ -207,9 +201,9 @@
       }
     };
 
-    // زر تفعيل خريطة الكثافة
+    // تفعيل Heat / Density
     let heatVisible = false;
-    document.getElementById("toggle-heat").onclick = function () {
+    document.getElementById("toggle-heat").onclick = function() {
       if (!heatVisible) {
         map.addLayer(heatLayer);
         heatVisible = true;
@@ -219,8 +213,8 @@
       }
     };
 
-    // زر تحديد الموقع
-    document.getElementById("locate-me").onclick = function () {
+    // تحديد الموقع
+    document.getElementById("locate-me").onclick = function() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
           const lat = pos.coords.latitude;
