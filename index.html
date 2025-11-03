@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <title>Ramallah Waste Containers</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
 
   <style>
@@ -25,7 +23,7 @@
       transition: opacity 1s ease-in;
     }
 
-    /* شاشة تحميل بشعار بيرزيت */
+    /* شاشة التحميل */
     #loading-screen {
       position: fixed;
       top: 0;
@@ -46,28 +44,15 @@
 
     /* حركة دوران الشعار */
     @keyframes rotate {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     /* حركة النص */
     @keyframes pulse {
-      0% {
-        opacity: 0.3;
-      }
-
-      50% {
-        opacity: 1;
-      }
-
-      100% {
-        opacity: 0.3;
-      }
+      0% { opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { opacity: 0.3; }
     }
 
     #loading-screen img {
@@ -87,11 +72,6 @@
       pointer-events: none;
     }
 
-    .leaflet-control-scale {
-      background: white;
-      padding: 2px;
-    }
-
     .leaflet-control-custom {
       background: white;
       padding: 5px;
@@ -103,11 +83,9 @@
 </head>
 
 <body>
-
   <!-- شاشة التحميل -->
   <div id="loading-screen">
-    <img src="https://upload.wikimedia.org/wikipedia/en/f/f7/Birzeit_University_logo.png"
-      alt="Birzeit University Logo">
+    <img src="https://upload.wikimedia.org/wikipedia/en/f/f7/Birzeit_University_logo.png" alt="Birzeit University Logo">
     <p id="loading-text">Loading Ramallah Map...</p>
   </div>
 
@@ -118,19 +96,18 @@
 
   <script>
     // إعداد الخريطة
-    const mapOptions = {
-      zoomSnap: 0.5,
+    const map = L.map("map", {
       center: [31.9045, 35.2045],
       zoom: 17.5,
-    };
-    const map = L.map("map", mapOptions);
+      zoomSnap: 0.5
+    });
 
     // مقياس الرسم
     L.control.scale({ position: 'bottomleft' }).addTo(map);
 
-    // إضافة إشارة الشمال
+    // إشارة الشمال
     const north = L.control({ position: "topright" });
-    north.onAdd = function (map) {
+    north.onAdd = function () {
       const div = L.DomUtil.create("div", "leaflet-control-custom");
       div.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/54/54494.png" width="40" title="North">';
       return div;
@@ -139,7 +116,7 @@
 
     // زر تحديد الموقع
     const locateBtn = L.control({ position: 'topleft' });
-    locateBtn.onAdd = function (map) {
+    locateBtn.onAdd = function () {
       const btn = L.DomUtil.create('button', 'locate-button');
       btn.innerHTML = '📍 Locate Me';
       btn.style.backgroundColor = '#fff';
@@ -153,23 +130,20 @@
       btn.onclick = function () {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
-            function (position) {
-              const lat = position.coords.latitude;
-              const lon = position.coords.longitude;
+            function (pos) {
+              const lat = pos.coords.latitude;
+              const lon = pos.coords.longitude;
               const userMarker = L.circleMarker([lat, lon], {
                 radius: 8,
                 fillColor: 'blue',
                 color: '#fff',
                 weight: 2,
-                opacity: 1,
                 fillOpacity: 0.9
               }).addTo(map);
-              map.setView([lat, lon], 17);
               userMarker.bindPopup("📍 You are here!").openPopup();
+              map.setView([lat, lon], 17);
             },
-            function () {
-              alert("⚠️ لم يتم السماح بالوصول إلى الموقع.");
-            }
+            function () { alert("⚠️ لم يتم السماح بالوصول إلى الموقع."); }
           );
         } else {
           alert("❌ المتصفح لا يدعم تحديد الموقع الجغرافي.");
@@ -179,9 +153,8 @@
     };
     locateBtn.addTo(map);
 
-    // اختيار الخريطة حسب الوقت (ليل / نهار)
-    const currentHour = new Date().getHours();
-    const isNight = currentHour >= 18 || currentHour < 6;
+    // خريطة ليلية/نهارية
+    const isNight = new Date().getHours() >= 18 || new Date().getHours() < 6;
     const baseMapUrl = isNight
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
@@ -193,47 +166,40 @@
     }).addTo(map);
 
     // تحميل الطبقات
-    let wasteContainersLayer;
-    let zonesLayer;
+    let wasteContainersLayer, zonesLayer;
 
     $.getJSON("wasteContainer.json", function (WC) {
       wasteContainersLayer = L.geoJson(WC, {
-        pointToLayer: function (feature, latlng) {
-          return L.circleMarker(latlng, {
-            radius: 6,
-            fillColor: "red",
-            color: "#fff",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.85
-          });
-        }
+        pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+          radius: 6,
+          fillColor: "red",
+          color: "#fff",
+          weight: 1,
+          fillOpacity: 0.85
+        })
       }).addTo(map);
-      checkAllLayersLoaded();
+      checkAllLoaded();
     });
 
     $.getJSON("RamallahZones.json", function (RZ) {
       zonesLayer = L.geoJson(RZ, {
-        style: function (feature) {
-          return {
-            fillColor: "yellow",
-            fillOpacity: 0.25,
-            color: "orange",
-            weight: 1.2,
-            opacity: 0.8
-          };
-        },
-        onEachFeature: function (feature, layer) {
-          layer.on('click', function () {
-            alert("Zone: " + feature.properties.NAME_ENGLI + "\nMAIL_CODE: " + feature.properties.MAIL_CODE);
+        style: () => ({
+          fillColor: "yellow",
+          fillOpacity: 0.25,
+          color: "orange",
+          weight: 1.2
+        }),
+        onEachFeature: (f, layer) => {
+          layer.on('click', () => {
+            alert(`Zone: ${f.properties.NAME_ENGLI}\nMAIL_CODE: ${f.properties.MAIL_CODE}`);
           });
         }
       }).addTo(map);
-      checkAllLayersLoaded();
+      checkAllLoaded();
     });
 
     // بعد تحميل الطبقات
-    function checkAllLayersLoaded() {
+    function checkAllLoaded() {
       if (wasteContainersLayer && zonesLayer) {
         L.control.layers({}, {
           "Zones": zonesLayer,
@@ -241,16 +207,11 @@
         }).addTo(map);
 
         document.getElementById("map").style.opacity = 1;
-
         const loading = document.getElementById("loading-screen");
         loading.classList.add("fade-out");
-        setTimeout(() => {
-          loading.style.display = "none";
-        }, 4000);
+        setTimeout(() => loading.style.display = "none", 4000);
       }
     }
   </script>
-
 </body>
-
 </html>
