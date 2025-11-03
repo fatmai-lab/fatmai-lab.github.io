@@ -106,14 +106,6 @@
     // مقياس الرسم
     L.control.scale({ position: 'bottomleft' }).addTo(map);
 
-    // إشارة الشمال
-    const north = L.control({ position: "topright" });
-    north.onAdd = function () {
-      const div = L.DomUtil.create("div", "leaflet-control-custom");
-      div.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/54/54494.png" width="40" title="North">';
-      return div;
-    };
-    north.addTo(map);
 
     // زر تحديد الموقع
     const locateBtn = L.control({ position: 'topleft' });
@@ -164,12 +156,13 @@
     }).addTo(map);
 
     // أيقونة دائرة للحاويات
-    const binIcon = L.icon({
-      iconUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097144.png',
+     const binIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/1076/1076909.png', // أيقونة حاوية
       iconSize: [28, 28],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -14]
+      iconAnchor: [14, 28], // نقرة على قاعدة الأيقونة
+      popupAnchor: [0, -28] // مكان ظهور البوب أب فوق الأيقونة
     });
+
 
     let wasteLayer, zonesLayer, markerCluster;
 
@@ -217,3 +210,4 @@
   </script>
 </body>
 </html>
+
