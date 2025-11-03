@@ -131,15 +131,21 @@
     });
 
     // تحميل الحاويات
-    $.getJSON("wasteContainer.json", function(data) {
-      let heatPoints = [];
-      wasteLayer = L.geoJson(data, {
-        pointToLayer: function(feature, latlng) {
-          heatPoints.push([latlng.lat, latlng.lng]);
-          return L.marker(latlng, { icon: binIcon })
-            .bindPopup("<b>Waste Container</b><br>Lat: " + latlng.lat.toFixed(4) + "<br>Lon: " + latlng.lng.toFixed(4));
-        }
-      }).addTo(map);
+$.getJSON("wasteContainer.json", function(data) {
+  wasteLayer = L.geoJson(data, {
+    pointToLayer: function(feature, latlng) {
+      return L.circleMarker(latlng, {
+        radius: 8,            // حجم الدائرة
+        fillColor: "red",     // لون التعبئة
+        color: "#fff",        // لون الحدود
+        weight: 2,            // سماكة الحدود
+        opacity: 1,           // شفافية الحدود
+        fillOpacity: 0.8      // شفافية التعبئة
+      }).bindPopup("<b>Waste Container</b><br>Lat: " + latlng.lat.toFixed(4) + "<br>Lon: " + latlng.lng.toFixed(4));
+    }
+  }).addTo(map);
+});
+
 
       // Heat / Density
       heatLayer = L.heatLayer(heatPoints, {
@@ -194,3 +200,4 @@
   </script>
 </body>
 </html>
+
