@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <title>Ramallah Waste Containers</title>
@@ -10,20 +9,16 @@
   <style>
     body { margin:0; height:100%; width:100%; overflow:hidden; }
     #map { position:absolute; width:100%; height:100%; opacity:0; transition: opacity 1s ease-in; }
-
     #loading-screen {
       position: fixed; top:0; left:0; width:100%; height:100%;
       background-color:#1a1a1a; display:flex; flex-direction:column; align-items:center; justify-content:center;
       color:white; font-family:sans-serif; z-index:9999; opacity:1; transition: opacity 1s ease;
     }
-
     #loading-screen img { width:150px; margin-bottom:15px; animation: rotate 4s linear infinite; }
     #loading-text { font-size:18px; letter-spacing:1px; animation: pulse 2s infinite; }
     #loading-screen.fade-out { opacity:0; pointer-events:none; }
-
     @keyframes rotate { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
     @keyframes pulse { 0%{opacity:0.3;} 50%{opacity:1;} 100%{opacity:0.3;} }
-
     .leaflet-control-scale { background:white; padding:2px; }
   </style>
 </head>
@@ -36,4 +31,88 @@
 
   <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const map = L.map("map", { center:[31.9045,35.2045], zoom:17.5, zoomSnap:0.25 });
+    L.control.scale({ position:'bottomleft' }).addTo(map);
+
+    // زر تحديد الموقع
+    const locateBtn = L.control({ position:'topleft' });
+    locateBtn.onAdd = function(){
+      const btn = L.DomUtil.create('button','locate-button');
+      btn.innerHTML='📍 Locate Me';
+      btn.style.cssText = 'background:#fff;padding:6px 10px;border:2px solid #555;border-radius:8px;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,0.4);';
+      btn.title='Find your current location';
+      btn.onclick = function(){
+        if(navigator.geolocation){
+          navigator.geolocation.getCurrentPosition(function(pos){
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const userMarker = L.circleMarker([lat,lon],{ radius:8, fillColor:'blue', color:'#fff', weight:2, fillOpacity:0.9 }).addTo(map);
+            userMarker.bindPopup("📍 You are here!").openPopup();
+            map.setView([lat,lon],17);
+          });
+        } else { alert("⚠️ المتصفح لا يدعم تحديد الموقع الجغرافي"); }
+      };
+      return btn;
+    };
+    locateBtn.addTo(map);
+
+    // خريطة ليلية/نهارية
+    const currentHour = new Date().getHours();
+    const isNight = currentHour>=18 || currentHour<6;
+    const baseMapUrl = isNight 
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    L.tileLayer(baseMapUrl,{ attribution:'&copy; OpenStreetMap & CARTO', subdomains:'abcd', maxZoom:20 }).addTo(map);
+
+    // أيقونة حاويات
+    const binIcon = L.icon({
+      iconUrl:'https://cdn-icons-png.flaticon.com/512/3405/3405174.png',
+      iconSize:[28,28],
+      iconAnchor:[14,28],
+      popupAnchor:[0,-28]
+    });
+
+    let markerCluster = L.markerClusterGroup();
+    let wasteLayer, zonesLayer;
+
+    $.getJSON("wasteContainer.json", function(data){
+      wasteLayer = L.geoJson(data, {
+        pointToLayer:function(feature,latlng){
+          return L.marker(latlng,{icon:binIcon})
+            .bindPopup("<b>Waste Container</b><br>Lat: "+latlng.lat.toFixed(4)+"<br>Lon: "+latlng.lng.toFixed(4));
+        }
+      });
+      markerCluster.addLayer(wasteLayer);
+      map.addLayer(markerCluster);
+      checkLoaded();
+    });
+
+    $.getJSON("RamallahZones.json", function(zones){
+      zonesLayer = L.geoJson(zones,{
+        style:{ fillColor:"yellow", fillOpacity:0.25, color:"orange", weight:1.2, opacity:0.8 },
+        onEachFeature:function(feature,layer){
+          layer.on('click',function(){
+            alert("Zone: "+feature.properties.NAME_ENGLI+"\nMAIL_CODE: "+feature.properties.MAIL_CODE);
+          });
+        }
+      }).addTo(map);
+      checkLoaded();
+    });
+
+    function checkLoaded(){
+      if(wasteLayer && zonesLayer){
+        L.control.layers({}, {"Zones":zonesLayer,"Waste Containers":markerCluster}).addTo(map);
+        document.getElementById("map").style.opacity=1;
+        const loading = document.getElementById("loading-screen");
+        loading.classList.add("fade-out");
+        setTimeout(()=>loading.style.display="none",4000);
+      }
+    }
+  </script>
+</body>
+</html>
